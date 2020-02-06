@@ -48,6 +48,7 @@
     <modules>
         <module>rsm-core</module>
         <module>rsm-lettuce</module>
+        <module>rsm-lettuce-cluster</module>
         <module>rsm-redisson</module>
     </modules>
 

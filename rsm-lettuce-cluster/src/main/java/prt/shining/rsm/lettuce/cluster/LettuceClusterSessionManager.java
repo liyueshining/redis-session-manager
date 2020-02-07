@@ -16,10 +16,10 @@
 
 package prt.shining.rsm.lettuce.cluster;
 
+import com.crimsonhexagon.rsm.RedisSession;
 import com.crimsonhexagon.rsm.RedisSessionClient;
 import com.crimsonhexagon.rsm.RedisSessionManager;
 import io.lettuce.core.AbstractRedisClient;
-import io.lettuce.core.ReadFrom;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulConnection;
@@ -28,15 +28,11 @@ import io.lettuce.core.cluster.ClusterClientOptions;
 import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
-import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
-import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.masterreplica.MasterReplica;
-import io.lettuce.core.masterreplica.StatefulRedisMasterReplicaConnection;
-import io.lettuce.core.sentinel.api.StatefulRedisSentinelConnection;
-import io.lettuce.core.support.ConnectionPoolSupport;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import io.lettuce.core.pubsub.RedisPubSubListener;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
+import org.apache.catalina.LifecycleException;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
@@ -44,31 +40,80 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class LettuceClusterSessionManager extends RedisSessionManager {
     public static final String DEFAULT_URI = "redis://localhost:6379";
-    public static final int DEFAULT_MAX_CONN_POOL_SIZE = 128;
-    public static final int DEFAULT_MIN_CONN_POOL_SIZE = 4;
 
     protected final Log log = LogFactory.getLog(getClass());
 
     private AbstractRedisClient client = RedisClient.create();
     private StatefulConnection<String, Object> connection;
+    StatefulRedisPubSubConnection<String, Object> pubSubConnection;
     private String nodes = DEFAULT_URI;
     private String password;
     private String sentinelMaster;
 
+    @Override
+    protected synchronized void startInternal() throws LifecycleException {
+        super.startInternal();
+
+        //start a thread to subscribe redis key expire event
+        RedisPubSubCommands<String, Object> redisPubSubCommands = pubSubConnection.sync();
+        redisPubSubCommands.getStatefulConnection().addListener(new RedisPubSubListener<String, Object>() {
+            @Override
+            public void message(String channel, Object message) {
+                log.info("msg=" + message +  "on channel " + channel);
+
+                String sessionKeyId = (String) message;
+
+                if (sessionKeyId.startsWith(getSessionKeyPrefix())) {
+                    RedisSession session = createEmptySession();
+                    session.setId(sessionKeyId.replaceFirst(getSessionKeyPrefix(), ""));
+
+                    //invoke session expire to fire session destroy event when session expired in redis
+                    session.expire();
+                }
+
+            }
+
+            @Override
+            public void message(String pattern, String channel, Object message) {
+
+            }
+
+            @Override
+            public void subscribed(String channel, long count) {
+
+            }
+
+            @Override
+            public void psubscribed(String pattern, long count) {
+
+            }
+
+            @Override
+            public void unsubscribed(String channel, long count) {
+
+            }
+
+            @Override
+            public void punsubscribed(String pattern, long count) {
+
+            }
+        });
+        redisPubSubCommands.subscribe("__keyevent@0__:expired");
+    }
 
     @Override
     protected final RedisSessionClient buildClient() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
         if (nodes == null || nodes.trim().length() == 0) {
+            log.error("Nodes can not be empty");
             throw new IllegalStateException("Manager must specify node string. e.g., nodes=\"redis://node1.com:6379 redis://node2.com:6379\"");
         }
         RedisCodec<String, Object> codec = new ContextClassloaderJdkSerializationCodec(getContainerClassLoader());
         List<String> nodes = Arrays.asList(getNodes().trim().split("\\s+"));
-        createRedisConnection(nodes, codec);
+        this.connection = createRedisConnection(nodes, codec);
         return new LettuceClusterSessionClient(connection, codec);
     }
 
@@ -84,7 +129,8 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
                 redisURI.setPassword(password);
             }
 
-            connection = ((RedisClient)client).connect(codec, redisURI);
+            pubSubConnection = ((RedisClient)client).connectPubSub(codec, redisURI);
+            StatefulRedisConnection<String, Object> connection = ((RedisClient)client).connect(codec, redisURI);
             return connection;
         } else {
             if (sentinelMaster != null){
@@ -97,7 +143,8 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
                     redisURI.setPassword(password);
                 }
 
-                connection = ((RedisClient)client).connect(codec, redisURI);
+                pubSubConnection = ((RedisClient)client).connectPubSub(codec, redisURI);
+                StatefulRedisConnection<String, Object> connection = ((RedisClient)client).connect(codec, redisURI);
                 return connection;
             }
 
@@ -120,7 +167,8 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
                     .topologyRefreshOptions(topologyRefreshOptions)
                     .build());
 
-            connection = ((RedisClusterClient) client).connect(codec);
+            pubSubConnection = ((RedisClusterClient) client).connectPubSub(codec);
+            StatefulRedisClusterConnection<String, Object> connection = ((RedisClusterClient) client).connect(codec);
             return connection;
         }
     }

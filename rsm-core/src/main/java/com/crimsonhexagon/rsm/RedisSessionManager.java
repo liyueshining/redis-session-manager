@@ -382,6 +382,10 @@ public abstract class RedisSessionManager extends ManagerBase {
         this.sessionKeyPrefix = sessionKeyPrefix;
     }
 
+    public String getSessionKeyPrefix() {
+        return this.sessionKeyPrefix;
+    }
+
     /**
      * If <code>true</code> the session will be persisted to redis immediately when any attribute is modified.<br>
      * Default is <code>false</code> which persists a modified session when the request is complete.

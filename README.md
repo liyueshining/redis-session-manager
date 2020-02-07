@@ -55,6 +55,23 @@ Multiple nodes can be configured with the `nodes` parameter (this includes AWS E
 See https://github.com/lettuce-io/lettuce-core/wiki/Redis-URI-and-connection-details for more information on 
 URI format and specifying timeouts, etc.
 
+## Lettuce Cluster (support standalone sentinel and cluster)
+* Default configuration: (communicates with redis on localhost:6379)
+```
+<Manager className="prt.shining.rsm.lettuce.cluster.LettuceClusterSessionManager" />
+```
+
+Multiple nodes can be configured with the `nodes` parameter (this includes AWS Elasticache config):
+```
+<Manager 
+  className="prt.shining.rsm.lettuce.cluster.LettuceClusterSessionManager"
+  nodes="redis://host1:6379 redis://host2:6379" 
+  password=""
+  sentinelMaster=""
+  [common config]
+/>
+```
+
 ## Redisson
 * Default configuration: (communicates with redis on localhost:6379)
 ```

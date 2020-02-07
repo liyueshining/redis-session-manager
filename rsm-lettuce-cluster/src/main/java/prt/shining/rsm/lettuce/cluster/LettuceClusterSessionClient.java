@@ -18,16 +18,19 @@ package prt.shining.rsm.lettuce.cluster;
 
 import com.crimsonhexagon.rsm.RedisSession;
 import com.crimsonhexagon.rsm.RedisSessionClient;
+
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.codec.RedisCodec;
+
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 import java.nio.ByteBuffer;
+
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -43,7 +46,7 @@ public class LettuceClusterSessionClient implements RedisSessionClient {
 
     <T> T sync(Function<RedisClusterCommands<String, Object>, T> s) {
         try  {
-            if (connection instanceof StatefulRedisConnection){
+            if (connection instanceof StatefulRedisConnection) {
                 return (T) s.apply(((StatefulRedisConnection) connection).sync());
             } else if (connection instanceof StatefulRedisClusterConnection) {
                 return (T) s.apply(((StatefulRedisClusterConnection) connection).sync());
@@ -58,7 +61,7 @@ public class LettuceClusterSessionClient implements RedisSessionClient {
 
     <T> T async(Function<RedisClusterAsyncCommands<String, Object>, T> s) {
         try  {
-            if (connection instanceof StatefulRedisConnection){
+            if (connection instanceof StatefulRedisConnection) {
                 return (T) s.apply(((StatefulRedisConnection) connection).async());
             } else if (connection instanceof StatefulRedisClusterConnection) {
                 return (T) s.apply(((StatefulRedisClusterConnection) connection).async());
@@ -97,7 +100,7 @@ public class LettuceClusterSessionClient implements RedisSessionClient {
 
     @Override
     public void expire(String key, long expirationTime, TimeUnit timeUnit) {
-        async( c -> c.pexpire(key, TimeUnit.MILLISECONDS.convert(expirationTime, timeUnit)));
+        async(c -> c.pexpire(key, TimeUnit.MILLISECONDS.convert(expirationTime, timeUnit)));
     }
 
     @Override

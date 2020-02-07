@@ -72,6 +72,8 @@ Multiple nodes can be configured with the `nodes` parameter (this includes AWS E
 />
 ```
 
+when use subscribe redis session key expired event, notify-keyspace-events should be enabled as "Ex"
+
 ## Redisson
 * Default configuration: (communicates with redis on localhost:6379)
 ```

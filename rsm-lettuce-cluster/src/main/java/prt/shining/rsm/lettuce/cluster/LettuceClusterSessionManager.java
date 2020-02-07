@@ -19,6 +19,7 @@ package prt.shining.rsm.lettuce.cluster;
 import com.crimsonhexagon.rsm.RedisSession;
 import com.crimsonhexagon.rsm.RedisSessionClient;
 import com.crimsonhexagon.rsm.RedisSessionManager;
+
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -121,11 +122,11 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
         if (nodes.size() == 1) {
             RedisURI redisURI = RedisURI.create(nodes.get(0));
 
-            if (sentinelMaster != null){
+            if (sentinelMaster != null) {
                 redisURI = RedisURI.Builder.sentinel(nodes.get(0), sentinelMaster).build();
             }
 
-            if (password != null){
+            if (password != null) {
                 redisURI.setPassword(password);
             }
 
@@ -133,13 +134,13 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
             StatefulRedisConnection<String, Object> connection = ((RedisClient)client).connect(codec, redisURI);
             return connection;
         } else {
-            if (sentinelMaster != null){
+            if (sentinelMaster != null) {
                 RedisURI.Builder redisURIBuilder = RedisURI.Builder.sentinel(nodes.get(0), sentinelMaster);
-                for (int index = 1; index <= nodes.size() -1; index++) {
+                for (int index = 1; index <= nodes.size() - 1; index++) {
                     redisURIBuilder.withSentinel(nodes.get(index));
                 }
                 RedisURI redisURI = redisURIBuilder.build();
-                if(password != null) {
+                if (password != null) {
                     redisURI.setPassword(password);
                 }
 
@@ -156,7 +157,7 @@ public class LettuceClusterSessionManager extends RedisSessionManager {
             List<RedisURI> uris = nodes.stream()
                     .map(RedisURI::create)
                     .map(uri -> {
-                        if(password != null) {
+                        if (password != null) {
                             uri.setPassword(password);
                         }
                         return uri; })

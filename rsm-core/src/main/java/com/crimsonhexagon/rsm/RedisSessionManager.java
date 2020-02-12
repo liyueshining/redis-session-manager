@@ -324,9 +324,6 @@ public abstract class RedisSessionManager extends ManagerBase {
             log.debug("Not saving " + redisSession.getId() + " to redis");
         }
 
-        log.trace("update session's access time when get session from redis to avoid remove session that not expired in redis");
-        redisSession.access();
-
         log.trace("Setting expire on " + redisSession.getId() + " to " + sessionExpirationTime);
         getClient().expire(sessionKey, sessionExpirationTime, TimeUnit.MINUTES);
     }
